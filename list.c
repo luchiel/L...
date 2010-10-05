@@ -3,11 +3,11 @@
 #define IteratorInvalid NULL
 
 typedef		
-	struct
+	struct ListItemTag
 	{
 		LSQ_BaseTypeT element;
-		void * next;
-		void * prev;
+		struct ListItemTag * next;
+		struct ListItemTag * prev;
 	}
 		ListItemT, * ListItemPointerT;
 
@@ -35,7 +35,7 @@ static LSQ_IteratorT createIterator(ListPointerT handle, ListItemPointerT item)
 	iterator = (ListIteratorPointerT)malloc(sizeof(ListIteratorT));
 	if(iterator == IteratorInvalid) return IteratorInvalid;
 	iterator->container = (ListPointerT)handle;
-	iterator->item = (ListItemPointerT)item;
+	iterator->item = item;
 	return iterator;
 }
 
@@ -150,14 +150,14 @@ void LSQ_AdvanceOneElement(LSQ_IteratorT iterator)
 {
 	ListIteratorPointerT it = (ListIteratorPointerT)iterator;	
 	if(it == IteratorInvalid || it->item == LSQ_HandleInvalid || LSQ_IsIteratorPastRear(it)) return;
-	it->item = (ListItemPointerT)(it->item->next);
+	it->item = it->item->next;
 }
 
 void LSQ_RewindOneElement(LSQ_IteratorT iterator)
 {
 	ListIteratorPointerT it = (ListIteratorPointerT)iterator;	
 	if(it == IteratorInvalid || it->item == LSQ_HandleInvalid || LSQ_IsIteratorBeforeFirst(it)) return;
-	it->item = (ListItemPointerT)(it->item->prev);
+	it->item = it->item->prev;
 }
 
 void LSQ_ShiftPosition(LSQ_IteratorT iterator, LSQ_IntegerIndexT shift)
@@ -225,8 +225,8 @@ void LSQ_InsertElementBeforeGiven(LSQ_IteratorT iterator, LSQ_BaseTypeT newEleme
 	el = (ListItemPointerT)malloc(sizeof(ListItemT));	
 	if(el == LSQ_HandleInvalid) return;
 	el->next = it->item;
-	el->prev = (ListItemPointerT)(it->item->prev);
-	((ListItemPointerT)(it->item->prev))->next = el;
+	el->prev = it->item->prev;
+	it->item->prev->next = el;
 	it->item->prev = el;	
 	el->element = newElement;
 	it->item = el;
@@ -244,7 +244,7 @@ extern void LSQ_DeleteRearElement(LSQ_HandleT handle)
 {
 	ListIteratorPointerT it = (ListIteratorPointerT)LSQ_GetPastRearElement(handle);
 	if(it == IteratorInvalid) return;
-	it->item = (ListItemPointerT)(it->item->prev);
+	it->item = it->item->prev;
 	LSQ_DeleteGivenElement(it);
 	LSQ_DestroyIterator(it);
 }
@@ -255,8 +255,8 @@ extern void LSQ_DeleteGivenElement(LSQ_IteratorT iterator)
 	ListItemPointerT c = NULL;
 	ListIteratorPointerT it = (ListIteratorPointerT)iterator;
 	if(it == IteratorInvalid || !LSQ_IsIteratorDereferencable(it)) return;
-	a = (ListItemPointerT)(it->item->prev);
-	c = (ListItemPointerT)(it->item->next);
+	a = it->item->prev;
+	c = it->item->next;
 	a->next = c;
 	c->prev = a;
 	free(it->item);
