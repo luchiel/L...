@@ -10,6 +10,15 @@ typedef
 		void * prev;
 	}
 		ListItemT, * ListItemPointerT;
+
+typedef
+	struct
+	{
+		ListItemPointerT bfirst;
+		ListItemPointerT prear;
+		LSQ_IntegerIndexT count;
+	}
+		ListT, * ListPointerT;
 		
 typedef
 	struct
