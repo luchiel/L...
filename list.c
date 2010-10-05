@@ -1,5 +1,7 @@
 #include "linear_sequence.h"
 
+#define IteratorInvalid NULL
+
 typedef		
 	struct
 	{
@@ -16,52 +18,60 @@ typedef
 	}
 		ListIteratorT, * ListIteratorPointerT;
 
+static LSQ_IteratorT createIterator(LSQ_HandleT handle);
+
 static LSQ_IteratorT createIterator(LSQ_HandleT handle)
 {
-	ListIteratorPointerT iterator;
+	ListIteratorPointerT iterator = NULL;
 	if(handle == LSQ_HandleInvalid) return LSQ_HandleInvalid;
 	iterator = (ListIteratorPointerT)malloc(sizeof(ListIteratorT));
-	if(iterator == NULL) return NULL;
+	if(iterator == IteratorInvalid) return IteratorInvalid;
 	iterator->container = handle;
 	return iterator;
 }
 
 extern LSQ_HandleT LSQ_CreateSequence(void)
 {
-	ListItemPointerT bfirst;
-	ListItemPointerT prear;	
+	ListItemPointerT bfirst = NULL;
+	ListItemPointerT prear = NULL;
 	bfirst = (ListItemPointerT)malloc(sizeof(ListItemT));
+	if(bfirst == LSQ_HandleInvalid) return LSQ_HandleInvalid;
 	prear = (ListItemPointerT)malloc(sizeof(ListItemT));	
-	if(bfirst == LSQ_HandleInvalid || prear == LSQ_HandleInvalid)
-		return LSQ_HandleInvalid;
+	if(prear == LSQ_HandleInvalid) return LSQ_HandleInvalid;
 	prear->prev = bfirst;
 	prear->next = NULL;
+	//prear->element = NULL;
 	prear->element = (LSQ_BaseTypeT *)malloc(sizeof(LSQ_BaseTypeT));
+	if(prear->element == NULL) return NULL;
 	bfirst->prev = NULL;
-	bfirst->next = prear;	
+	bfirst->next = prear;
+	//bfirst->element = NULL;
 	bfirst->element = (LSQ_BaseTypeT *)malloc(sizeof(LSQ_BaseTypeT));
+	if(bfirst->element == NULL) return NULL;
 	return bfirst; 
 }
 
 extern void LSQ_DestroySequence(LSQ_HandleT handle)
 {
 	ListIteratorPointerT it = LSQ_GetFrontElement(handle);
-	if(it == NULL) return;
+	if(it == IteratorInvalid) return;
 	while(it->container->next != LSQ_HandleInvalid)
 	{
+		free(((ListItemPointerT)(it->container->prev))->element);
 		free(it->container->prev);
 		it->container = (ListItemPointerT)(it->container->next);
 	}
+	free(((ListItemPointerT)(it->container->prev))->element);
+	free(it->container->prev);
 	free(it->container);
 	LSQ_DestroyIterator(it);
 }
 
 extern LSQ_IntegerIndexT LSQ_GetSize(LSQ_HandleT handle)
 {
-	int i;
+	int i = 0;
 	ListIteratorPointerT it = LSQ_GetFrontElement(handle);
-	if(it == NULL) return -1;
-	i = 0;
+	if(it == IteratorInvalid) return -1;	
 	while(it->container->next != LSQ_HandleInvalid)
 	{
 		it->container = (ListItemPointerT)(it->container->next);
@@ -74,43 +84,43 @@ extern LSQ_IntegerIndexT LSQ_GetSize(LSQ_HandleT handle)
 extern int LSQ_IsIteratorDereferencable(LSQ_IteratorT iterator)
 {
 	ListIteratorPointerT it = (ListIteratorPointerT)iterator;
-	if(it == NULL) return -1;
+	if(it == IteratorInvalid) return -1;
 	return (it->container->prev != LSQ_HandleInvalid && it->container->next != LSQ_HandleInvalid);
 }
 
 extern int LSQ_IsIteratorPastRear(LSQ_IteratorT iterator)
 {
 	ListIteratorPointerT it = (ListIteratorPointerT)iterator;
-	if(it == NULL) return -1;
+	if(it == IteratorInvalid) return -1;
 	return (it->container->next == LSQ_HandleInvalid);
 }
 
 extern int LSQ_IsIteratorBeforeFirst(LSQ_IteratorT iterator)
 {
 	ListIteratorPointerT it = (ListIteratorPointerT)iterator;
-	if(it == NULL) return -1;
+	if(it == IteratorInvalid) return -1;
 	return (it->container->prev == LSQ_HandleInvalid);
 }
 
 extern LSQ_BaseTypeT* LSQ_DereferenceIterator(LSQ_IteratorT iterator)
 {
-	ListIteratorPointerT it = (ListIteratorPointerT)iterator;
-	//need to check container?
-	if(it == NULL || it->container == LSQ_HandleInvalid || !LSQ_IsIteratorDereferencable) return NULL;
+	ListIteratorPointerT it = (ListIteratorPointerT)iterator;	
+	if(it == IteratorInvalid || it->container == LSQ_HandleInvalid || !LSQ_IsIteratorDereferencable)
+		return LSQ_HandleInvalid;
 	return it->container->element;
 }
 
 extern LSQ_IteratorT LSQ_GetElementByIndex(LSQ_HandleT handle, LSQ_IntegerIndexT index)
 {
 	ListIteratorPointerT it = LSQ_GetFrontElement(handle);
-	if(it == NULL) return NULL;
+	if(it == IteratorInvalid) return IteratorInvalid;
 	LSQ_ShiftPosition(it, index);
 	return it;
 }
 
 extern LSQ_IteratorT LSQ_GetFrontElement(LSQ_HandleT handle)
 {
-	ListIteratorPointerT it;
+	ListIteratorPointerT it = NULL;
 	ListItemPointerT h = (ListItemPointerT)handle;	
 	if(h == LSQ_HandleInvalid) return LSQ_HandleInvalid;
 	while(h->prev != LSQ_HandleInvalid)
@@ -123,7 +133,7 @@ extern LSQ_IteratorT LSQ_GetFrontElement(LSQ_HandleT handle)
 
 extern LSQ_IteratorT LSQ_GetPastRearElement(LSQ_HandleT handle)
 {
-	ListIteratorPointerT it;
+	ListIteratorPointerT it = NULL;
 	ListItemPointerT h = (ListItemPointerT)handle;
 	if(h == LSQ_HandleInvalid) return LSQ_HandleInvalid;
 	while(h->next != LSQ_HandleInvalid)
@@ -136,34 +146,30 @@ extern LSQ_IteratorT LSQ_GetPastRearElement(LSQ_HandleT handle)
 
 extern void LSQ_DestroyIterator(LSQ_IteratorT iterator)
 {
-	if(iterator == NULL) return;
+	if(iterator == IteratorInvalid) return;
 	free(iterator);
 }
 
 extern void LSQ_AdvanceOneElement(LSQ_IteratorT iterator)
 {
-	ListIteratorPointerT it = (ListIteratorPointerT)iterator;
-	//need to check container?
-	if(it == NULL || it->container == LSQ_HandleInvalid || LSQ_IsIteratorPastRear(it)) return;
+	ListIteratorPointerT it = (ListIteratorPointerT)iterator;	
+	if(it == IteratorInvalid || it->container == LSQ_HandleInvalid || LSQ_IsIteratorPastRear(it)) return;
 	it->container = (ListItemPointerT)(it->container->next);
 }
 
 extern void LSQ_RewindOneElement(LSQ_IteratorT iterator)
 {
-	ListIteratorPointerT it = (ListIteratorPointerT)iterator;
-	//need to check container?
-	if(it == NULL || it->container == LSQ_HandleInvalid || LSQ_IsIteratorBeforeFirst(it)) return;
+	ListIteratorPointerT it = (ListIteratorPointerT)iterator;	
+	if(it == IteratorInvalid || it->container == LSQ_HandleInvalid || LSQ_IsIteratorBeforeFirst(it)) return;
 	it->container = (ListItemPointerT)(it->container->prev);
 }
 
 extern void LSQ_ShiftPosition(LSQ_IteratorT iterator, LSQ_IntegerIndexT shift)
 {
-	int i;
+	int i = 0;
 	ListIteratorPointerT it;
-	it = (ListIteratorPointerT)iterator;	
-	//need to check container?
-	if(it == NULL || it->container == LSQ_HandleInvalid) return;
-	i = 0;
+	it = (ListIteratorPointerT)iterator;		
+	if(it == IteratorInvalid || it->container == LSQ_HandleInvalid) return;	
 	if(shift > 0)
 	{
 		for(i = 0; i < shift; i++)
@@ -172,7 +178,7 @@ extern void LSQ_ShiftPosition(LSQ_IteratorT iterator, LSQ_IntegerIndexT shift)
 			{				
 				break;
 			}
-			it->container = (ListItemPointerT)(it->container->next);
+			LSQ_AdvanceOneElement(it);
 		}
 	}
 	else
@@ -183,7 +189,7 @@ extern void LSQ_ShiftPosition(LSQ_IteratorT iterator, LSQ_IntegerIndexT shift)
 			{				
 				break;
 			}
-			it->container = (ListItemPointerT)(it->container->prev);
+			LSQ_RewindOneElement(it);
 		}
 	}
 }
@@ -191,9 +197,9 @@ extern void LSQ_ShiftPosition(LSQ_IteratorT iterator, LSQ_IntegerIndexT shift)
 extern void LSQ_SetPosition(LSQ_IteratorT iterator, LSQ_IntegerIndexT pos)
 {
 	ListIteratorPointerT it = (ListIteratorPointerT)iterator;
-	if(it == NULL) return;
+	if(it == IteratorInvalid) return;
 	it = LSQ_GetFrontElement(it->container);
-	if(it == NULL) return;
+	if(it == IteratorInvalid) return;
 	LSQ_ShiftPosition(it, pos);
 	((ListIteratorPointerT)iterator)->container = it->container;
 	LSQ_DestroyIterator(it);
@@ -202,7 +208,7 @@ extern void LSQ_SetPosition(LSQ_IteratorT iterator, LSQ_IntegerIndexT pos)
 extern void LSQ_InsertFrontElement(LSQ_HandleT handle, LSQ_BaseTypeT element)
 {
 	ListIteratorPointerT it = LSQ_GetFrontElement(handle);
-	if(it == NULL) return;
+	if(it == IteratorInvalid) return;
 	LSQ_InsertElementBeforeGiven(it, element);
 	LSQ_DestroyIterator(it);
 }
@@ -210,29 +216,30 @@ extern void LSQ_InsertFrontElement(LSQ_HandleT handle, LSQ_BaseTypeT element)
 extern void LSQ_InsertRearElement(LSQ_HandleT handle, LSQ_BaseTypeT element)
 {
 	ListIteratorPointerT it = LSQ_GetPastRearElement(handle);
-	if(it == NULL) return;
+	if(it == IteratorInvalid) return;
 	LSQ_InsertElementBeforeGiven(it, element);	
 	LSQ_DestroyIterator(it);
 }
 
 extern void LSQ_InsertElementBeforeGiven(LSQ_IteratorT iterator, LSQ_BaseTypeT newElement)
 {
-	ListItemPointerT el;
-	ListIteratorPointerT it;
-	el = (ListItemPointerT)malloc(sizeof(ListItemT));	
+	ListItemPointerT el = NULL;
+	ListIteratorPointerT it = NULL;	
 	it = (ListIteratorPointerT)iterator;	
 	if
 	(
-		it == NULL ||
-		el == LSQ_HandleInvalid ||		
+		it == IteratorInvalid ||
 		LSQ_IsIteratorBeforeFirst(it)
 	)
-		return;	
+		return;
+	el = (ListItemPointerT)malloc(sizeof(ListItemT));	
+	if(el == LSQ_HandleInvalid) return;
 	el->next = it->container;
 	el->prev = (ListItemPointerT)(it->container->prev);
 	((ListItemPointerT)(it->container->prev))->next = el;
-	it->container->prev = el;
+	it->container->prev = el;	
 	el->element = (LSQ_BaseTypeT *)malloc(sizeof(LSQ_BaseTypeT));
+	if(el->element == NULL) return;
 	* el->element = newElement;
 	it->container = el;
 }
@@ -241,22 +248,24 @@ extern void LSQ_DeleteFrontElement(LSQ_HandleT handle)
 {
 	ListIteratorPointerT it = LSQ_GetFrontElement(handle);
 	LSQ_DeleteGivenElement(it);
+	LSQ_DestroyIterator(it);
 }
 
 extern void LSQ_DeleteRearElement(LSQ_HandleT handle)
 {
 	ListIteratorPointerT it = LSQ_GetPastRearElement(handle);
-	if(it == NULL) return;
+	if(it == IteratorInvalid) return;
 	it->container = it->container->prev;
 	LSQ_DeleteGivenElement(it);
+	LSQ_DestroyIterator(it);
 }
 
 extern void LSQ_DeleteGivenElement(LSQ_IteratorT iterator)
 {
-	ListItemPointerT a;
-	ListItemPointerT c;
+	ListItemPointerT a = NULL;
+	ListItemPointerT c = NULL;
 	ListIteratorPointerT it = (ListIteratorPointerT)iterator;
-	if(it == NULL || !LSQ_IsIteratorDereferencable(it)) return;
+	if(it == IteratorInvalid || !LSQ_IsIteratorDereferencable(it)) return;
 	a = (ListItemPointerT)(it->container->prev);
 	c = (ListItemPointerT)(it->container->next);
 	a->next = c;
