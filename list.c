@@ -79,7 +79,7 @@ extern LSQ_IntegerIndexT LSQ_GetSize(LSQ_HandleT handle)
 		i++;
 	}
 	LSQ_DestroyIterator(it);
-	return i - 1;
+	return i;
 }
 
 extern int LSQ_IsIteratorDereferencable(LSQ_IteratorT iterator)
