@@ -3,8 +3,9 @@
 #include <assert.h>
 #include "linear_sequence.h"
 
-#define CapacityFactor 2
-#define CapacityMinOccupation 0.33
+#define CAPACITY_INCREASE_FACTOR 2
+#define CAPACITY_DECREASE_FACTOR 2
+#define CAPACITY_OCCUPATION_LIMIT 0.33
 
 typedef
 	enum
@@ -55,7 +56,7 @@ static void reallocIfOverflow(LSQ_HandleT handle)
 	if(h->count == h->size)
 	{
 		if(h->size == 0) h->size++;
-		h->size = h->size * CapacityFactor;
+		h->size = h->size * CAPACITY_INCREASE_FACTOR;
 		h->elements = realloc(h->elements, sizeof(LSQ_BaseTypeT) * h->size);
 	}
 }
@@ -63,9 +64,9 @@ static void reallocIfOverflow(LSQ_HandleT handle)
 static void reallocIfFreeSpace(LSQ_HandleT handle)
 {
 	ArrayPointerT h = (ArrayPointerT)handle;
-	if(h->count < h->size * CapacityMinOccupation)
+	if(h->count < h->size * CAPACITY_OCCUPATION_LIMIT)
 	{
-		h->size = h->size / CapacityFactor;
+		h->size = h->size / CAPACITY_DECREASE_FACTOR;
 		h->elements = realloc(h->elements, sizeof(LSQ_BaseTypeT) * h->size);	
 	}
 }
