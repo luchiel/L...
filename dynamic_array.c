@@ -1,6 +1,10 @@
 #include <string.h>
+//#define NDEBUG
 #include <assert.h>
 #include "linear_sequence.h"
+
+#define CapacityFactor 2
+#define CapacityMinOccupation 0.33
 
 typedef
 	enum
@@ -30,7 +34,6 @@ typedef
 		ArrayIteratorT, * ArrayIteratorPointerT;
 
 static LSQ_IteratorT createIterator(LSQ_HandleT handle);
-static void reallocElements(LSQ_HandleT handle);
 static void reallocIfOverflow(LSQ_HandleT handle);
 static void reallocIfFreeSpace(LSQ_HandleT handle);
 
@@ -46,30 +49,24 @@ static LSQ_IteratorT createIterator(LSQ_HandleT handle)
 	return iterator;
 }
 
-static void reallocElements(LSQ_HandleT handle)
-{
-	ArrayPointerT h = (ArrayPointerT)handle;
-	if(h->size != 0)
-		h->elements = realloc(h->elements, sizeof(LSQ_BaseTypeT) * h->size);	
-}
-
 static void reallocIfOverflow(LSQ_HandleT handle)
 {
 	ArrayPointerT h = (ArrayPointerT)handle;
 	if(h->count == h->size)
 	{
-		h->size++;
-		reallocElements(handle);
+		if(h->size == 0) h->size++;
+		h->size = h->size * CapacityFactor;
+		h->elements = realloc(h->elements, sizeof(LSQ_BaseTypeT) * h->size);
 	}
 }
 
 static void reallocIfFreeSpace(LSQ_HandleT handle)
 {
 	ArrayPointerT h = (ArrayPointerT)handle;
-	if(h->count < h->size)
+	if(h->count < h->size * CapacityMinOccupation)
 	{
-		h->size = h->count;
-		reallocElements(handle);
+		h->size = h->size / CapacityFactor;
+		h->elements = realloc(h->elements, sizeof(LSQ_BaseTypeT) * h->size);	
 	}
 }
 
@@ -277,10 +274,10 @@ void LSQ_DeleteGivenElement(LSQ_IteratorT iterator)
 	if (it->container->count > 0)
 	{
 		placeOfElement = it->container->elements + it->index;		
+		it->container->count--;
 		memmove(
 			placeOfElement, placeOfElement + 1,
-			sizeof(LSQ_BaseTypeT) * (it->container->count - it->index - 1));
-		it->container->count--;
+			sizeof(LSQ_BaseTypeT) * (it->container->count - it->index));		
 		reallocIfFreeSpace(it->container);
     }	
 }
