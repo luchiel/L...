@@ -14,8 +14,8 @@ typedef
 typedef
 	struct ArrayItemTag
 	{
-		ArrayItemTag left;
-		ArrayItemTag right;
+		struct ArrayItemTag * left;
+		struct ArrayItemTag * right;
 		LSQ_IntegerIndexT key;
 		LSQ_BaseTypeT value;
 		int height;
@@ -43,11 +43,14 @@ static LSQ_IteratorT createIterator(LSQ_HandleT handle, ArrayItemPointerT item)
 	ArrayIteratorPointerT it = NULL;
 	if(handle == NULL || item == NULL) return LSQ_HandleInvalid;
 	it = (ArrayIteratorPointerT)malloc(sizeof(ArrayIteratorT));
-	if(iterator == NULL) return LSQ_HandleInvalid;	
+	if(it == NULL) return LSQ_HandleInvalid;	
 	it->container = (AssocArrayPointerT)handle;
 	it->item = item;
 	return it;	
 }
+
+//повороты, балансировка
+//передвижение по дереву - вынести... Через rewind и advance? 
 
 LSQ_HandleT LSQ_CreateSequence(void)
 {
@@ -87,23 +90,42 @@ int LSQ_IsIteratorBeforeFirst(LSQ_IteratorT iterator)
 	//?
 }
 
-LSQ_BaseTypeT* LSQ_DereferenceIterator(LSQ_IteratorT iterator)
+LSQ_BaseTypeT * LSQ_DereferenceIterator(LSQ_IteratorT iterator)
 {
 	ArrayIteratorPointerT it = (ArrayIteratorPointerT)iterator;
-	return !LSQ_IsIteratorDereferencable(it) ? LSQ_HandleInvalid : * (it->item->value);
+	return !LSQ_IsIteratorDereferencable(it) ? LSQ_HandleInvalid : &(it->item->value);
 	//DEREFERENCABLE == 0?
 }
 
 LSQ_IntegerIndexT LSQ_GetIteratorKey(LSQ_IteratorT iterator)
 {
 	ArrayIteratorPointerT it = (ArrayIteratorPointerT)iterator;
-	return !LSQ_IsIteratorDereferencable(it) ? LSQ_HandleInvalid : it->item->key;	
+	return !LSQ_IsIteratorDereferencable(it) ? 0 : it->item->key;	
 	//DEREFERENCABLE == 0?
 }
 
 /* Функция, возвращающая итератор, ссылающийся на элемент с указанным ключом. Если элемент с данным ключом  *
  * отсутствует в контейнере, должен быть возвращен итератор PastRear.                                       */
-LSQ_IteratorT LSQ_GetElementByIndex(LSQ_HandleT handle, LSQ_IntegerIndexT index);
+LSQ_IteratorT LSQ_GetElementByIndex(LSQ_HandleT handle, LSQ_IntegerIndexT index)
+{
+	ArrayItemPointerT i = NULL;
+	AssocArrayPointerT h = (AssocArrayPointerT)handle;
+	if(h == NULL) return LSQ_HandleInvalid;
+	i = h->root;
+	//i != NULL?
+	while(i != NULL && i->key != index)
+	{
+		if(i->key > index)
+		{
+			i = i->left;
+		}
+		else
+		{
+			i = i->right;
+		}
+	}
+	return i == NULL ? LSQ_GetPastRearElement(handle) : createIterator(h, i);
+}
 
 LSQ_IteratorT LSQ_GetFrontElement(LSQ_HandleT handle)
 {
@@ -113,29 +135,72 @@ LSQ_IteratorT LSQ_GetFrontElement(LSQ_HandleT handle)
 }
 
 /* Функция, возвращающая итератор, ссылающийся на фиктивный элемент, следующий за последним элементом контейнера */
-LSQ_IteratorT LSQ_GetPastRearElement(LSQ_HandleT handle);
+LSQ_IteratorT LSQ_GetPastRearElement(LSQ_HandleT handle)
+{
+	AssocArrayPointerT h = (AssocArrayPointerT)handle;
+	if(h == NULL) return LSQ_HandleInvalid;
+	
+	return NULL;
+}
 
-/* Функция, уничтожающая итератор с заданным дескриптором и освобождающая принадлежащую ему память */
-extern void LSQ_DestroyIterator(LSQ_IteratorT iterator);
+void LSQ_DestroyIterator(LSQ_IteratorT iterator)
+{
+	free(iterator);
+}
 
 /* Следующие функции позволяют реализовать итерацию по элементам. При этом осуществляется проход только  *
  * по тем ключам, которые есть в контейнере.                                                             */
 /* Функция, перемещающая итератор на один элемент вперед */
-extern void LSQ_AdvanceOneElement(LSQ_IteratorT iterator);
+void LSQ_AdvanceOneElement(LSQ_IteratorT iterator);
 /* Функция, перемещающая итератор на один элемент назад */
-extern void LSQ_RewindOneElement(LSQ_IteratorT iterator);
+void LSQ_RewindOneElement(LSQ_IteratorT iterator);
 /* Функция, перемещающая итератор на заданное смещение со знаком */
-extern void LSQ_ShiftPosition(LSQ_IteratorT iterator, LSQ_IntegerIndexT shift);
+void LSQ_ShiftPosition(LSQ_IteratorT iterator, LSQ_IntegerIndexT shift);
 /* Функция, устанавливающая итератор на элемент с указанным номером */
-extern void LSQ_SetPosition(LSQ_IteratorT iterator, LSQ_IntegerIndexT pos);
+void LSQ_SetPosition(LSQ_IteratorT iterator, LSQ_IntegerIndexT pos);
 
 /* Функция, добавляющая новую пару ключ-значение в контейнер. Если элемент с данным ключом существует,  *
  * его значение обновляется указанным.                                                                  */
-extern void LSQ_InsertElement(LSQ_HandleT handle, LSQ_IntegerIndexT key, LSQ_BaseTypeT value);
+void LSQ_InsertElement(LSQ_HandleT handle, LSQ_IntegerIndexT key, LSQ_BaseTypeT value)
+{
+	ArrayItemPointerT i = NULL;
+	AssocArrayPointerT h = (AssocArrayPointerT)handle;
+	if(h == NULL) return;
+	//h->item == NULL?
+	i = h->root;
+	while(i != NULL && i->key != key)
+	{
+		if(i->key > key)
+		{
+			i = i->left;
+		}
+		else
+		{
+			i = i->right;
+		}
+	}
+	if(i == NULL)
+	{
+		//malloc, attach to prev
+	}
+	else
+	{
+		i->value = value;
+	}
+	//ballance!
+}
 
 /* Функция, удаляющая первый элемент контейнера */
-extern void LSQ_DeleteFrontElement(LSQ_HandleT handle);
+void LSQ_DeleteFrontElement(LSQ_HandleT handle)
+{
+}
+
 /* Функция, удаляющая последний элемент контейнера */
-extern void LSQ_DeleteRearElement(LSQ_HandleT handle);
+void LSQ_DeleteRearElement(LSQ_HandleT handle)
+{
+}
+
 /* Функция, удаляющая элемент контейнера, указываемый заданным ключом. */
-extern void LSQ_DeleteElement(LSQ_HandleT handle, LSQ_IntegerIndexT key);
+void LSQ_DeleteElement(LSQ_HandleT handle, LSQ_IntegerIndexT key)
+{
+}
