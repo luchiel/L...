@@ -1,3 +1,5 @@
+//#define NDEBUG
+#include <assert.h>
 #include "linear_sequence_assoc.h"
 
 typedef
@@ -14,7 +16,7 @@ typedef
 	{
 		ArrayItemTag left;
 		ArrayItemTag right;
-		LSQ_BaseTypeT key;
+		LSQ_IntegerIndexT key;
 		LSQ_BaseTypeT value;
 		int height;
 	}
@@ -69,28 +71,49 @@ LSQ_IntegerIndexT LSQ_GetSize(LSQ_HandleT handle)
 
 int LSQ_IsIteratorDereferencable(LSQ_IteratorT iterator)
 {
+	ArrayIteratorPointerT it = (ArrayIteratorPointerT)iterator;
 	if(it == NULL) return 0;
-
+	//assert(it->container != NULL);
+	return it->item == NULL ? 0 : IT_DEREFERENCABLE;
 }
 
-/* Функция, определяющая, указывает ли данный итератор на элемент, следующий за последним в контейнере */
-extern int LSQ_IsIteratorPastRear(LSQ_IteratorT iterator);
-/* Функция, определяющая, указывает ли данный итератор на элемент, предшествующий первому в контейнере */
-extern int LSQ_IsIteratorBeforeFirst(LSQ_IteratorT iterator);
+int LSQ_IsIteratorPastRear(LSQ_IteratorT iterator)
+{
+	//?
+}
 
-/* Функция разыменовывающая итератор. Возвращает указатель на значение элемента, на который ссылается данный итератор */
-extern LSQ_BaseTypeT* LSQ_DereferenceIterator(LSQ_IteratorT iterator);
-/* Функция разыменовывающая итератор. Возвращает указатель на ключ элемента, на который ссылается данный итератор */
-extern LSQ_IntegerIndexT LSQ_GetIteratorKey(LSQ_IteratorT iterator);
+int LSQ_IsIteratorBeforeFirst(LSQ_IteratorT iterator)
+{
+	//?
+}
 
-/* Следующие три функции создают итератор в памяти и возвращают его дескриптор */
+LSQ_BaseTypeT* LSQ_DereferenceIterator(LSQ_IteratorT iterator)
+{
+	ArrayIteratorPointerT it = (ArrayIteratorPointerT)iterator;
+	return !LSQ_IsIteratorDereferencable(it) ? LSQ_HandleInvalid : * (it->item->value);
+	//DEREFERENCABLE == 0?
+}
+
+LSQ_IntegerIndexT LSQ_GetIteratorKey(LSQ_IteratorT iterator)
+{
+	ArrayIteratorPointerT it = (ArrayIteratorPointerT)iterator;
+	return !LSQ_IsIteratorDereferencable(it) ? LSQ_HandleInvalid : it->item->key;	
+	//DEREFERENCABLE == 0?
+}
+
 /* Функция, возвращающая итератор, ссылающийся на элемент с указанным ключом. Если элемент с данным ключом  *
  * отсутствует в контейнере, должен быть возвращен итератор PastRear.                                       */
-extern LSQ_IteratorT LSQ_GetElementByIndex(LSQ_HandleT handle, LSQ_IntegerIndexT index);
-/* Функция, возвращающая итератор, ссылающийся на первый элемент контейнера */
-extern LSQ_IteratorT LSQ_GetFrontElement(LSQ_HandleT handle);
+LSQ_IteratorT LSQ_GetElementByIndex(LSQ_HandleT handle, LSQ_IntegerIndexT index);
+
+LSQ_IteratorT LSQ_GetFrontElement(LSQ_HandleT handle)
+{
+	AssocArrayPointerT h = (AssocArrayPointerT)handle;
+	if(h == NULL) return LSQ_HandleInvalid;
+	return createIterator(h, h->root);
+}
+
 /* Функция, возвращающая итератор, ссылающийся на фиктивный элемент, следующий за последним элементом контейнера */
-extern LSQ_IteratorT LSQ_GetPastRearElement(LSQ_HandleT handle);
+LSQ_IteratorT LSQ_GetPastRearElement(LSQ_HandleT handle);
 
 /* Функция, уничтожающая итератор с заданным дескриптором и освобождающая принадлежащую ему память */
 extern void LSQ_DestroyIterator(LSQ_IteratorT iterator);
