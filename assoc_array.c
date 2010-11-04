@@ -51,7 +51,7 @@ typedef
 static LSQ_IteratorT createIterator(LSQ_HandleT handle, IteratorTypeT type, TreeNodePointerT item);
 static void freeTreeNode(TreeNodePointerT bode);
 static void checkParentAndReplaceChild(
-    TreeIteratorPointerT it, TreeNodePointerT oldChild, TreeNodePointerT newChild);
+    TreeIteratorPointerT it, TreeNodePointerT newChild);
 static void rotateTreeNodeLeft(TreeNodePointerT oldRoot, TreeNodePointerT newRoot);
 static void rotateTreeNodeRight(TreeNodePointerT oldRoot, TreeNodePointerT newRoot);
 static void rotateTreeNode(LSQ_IteratorT iterator, RotateModeT mode);
@@ -112,16 +112,16 @@ void freeTreeNode(TreeNodePointerT node)
 }
 
 void checkParentAndReplaceChild(
-    TreeIteratorPointerT it, TreeNodePointerT oldChild, TreeNodePointerT newChild)
+    TreeIteratorPointerT it, TreeNodePointerT newChild)
 {
-    if(it->container->root == oldChild)
+    if(it->container->root == it->item)
         it->container->root = newChild;
     else
     {
-        if(oldChild->parent->left == oldChild)
-            oldChild->parent->left = newChild;
+        if(it->item->parent->left == it->item)
+            it->item->parent->left = newChild;
         else
-            oldChild->parent->right = newChild;
+            it->item->parent->right = newChild;
     }
 }
 
@@ -166,7 +166,7 @@ void rotateTreeNode(LSQ_IteratorT iterator, RotateModeT mode)
     oldRoot = it->item;
     newRoot = mode == RM_LEFT ? it->item->right : it->item->left;
 
-    checkParentAndReplaceChild(it, oldRoot, newRoot);
+    checkParentAndReplaceChild(it, newRoot);
     
     mode == RM_LEFT ? rotateTreeNodeLeft(oldRoot, newRoot) : rotateTreeNodeRight(oldRoot, newRoot);
 
@@ -279,7 +279,7 @@ void LSQ_DestroyIterator(LSQ_IteratorT iterator)
 
 void LSQ_AdvanceOneElement(LSQ_IteratorT iterator)
 {
-    bool leftChild = false;
+    int leftChild = 0;
     TreeIteratorPointerT it = (TreeIteratorPointerT)iterator;
     if(it == NULL || LSQ_IsIteratorPastRear(it))
         return;
@@ -294,7 +294,7 @@ void LSQ_AdvanceOneElement(LSQ_IteratorT iterator)
 
     if(LSQ_IsIteratorDereferencable(it) && it->item->right == NULL)
     {
-        while(it->parent != NULL && !leftChild)
+        while(it->item->parent != NULL && !leftChild)
         {
             leftChild = it->item == it->item->parent->left;
             it->item = it->item->parent;
@@ -318,7 +318,7 @@ void LSQ_AdvanceOneElement(LSQ_IteratorT iterator)
 
 void LSQ_RewindOneElement(LSQ_IteratorT iterator)
 {
-    bool rightChild = false;
+    int rightChild = 0;
     TreeIteratorPointerT it = (TreeIteratorPointerT)iterator;
     if(it == NULL || LSQ_IsIteratorBeforeFirst(it))
         return;
@@ -333,7 +333,7 @@ void LSQ_RewindOneElement(LSQ_IteratorT iterator)
 
     if(LSQ_IsIteratorDereferencable(it) && it->item->left == NULL)
     {
-        while(it->parent != NULL && !rightChild)
+        while(it->item->parent != NULL && !rightChild)
         {
             rightChild = it->item == it->item->parent->right;
             it->item = it->item->parent;
@@ -426,7 +426,7 @@ void LSQ_InsertElement(LSQ_HandleT handle, LSQ_IntegerIndexT key, LSQ_BaseTypeT 
         }
         it->item = it->item->parent;
     }
-    while(it->item->parent != NULL || getTreeNodeHeight(it->item))
+    while(it->item->parent != NULL || getTreeNodeHeight(it->item));
     
     LSQ_DestroyIterator(it);
 }
@@ -452,7 +452,19 @@ void LSQ_DeleteRearElement(LSQ_HandleT handle)
 
 void LSQ_DeleteElement(LSQ_HandleT handle, LSQ_IntegerIndexT key)
 {
-    TreeIteratorPointerT it = LSQ_GetElementByIndex(key);
+    TreeIteratorPointerT it = (TreeIteratorPointerT)LSQ_GetElementByIndex(handle, key);
     if(it == NULL)
         return;
+    assert(it->item != NULL);
+    if(it->item->left == NULL && it->item->right == NULL)
+    {
+        checkParentAndReplaceChild(it, NULL);
+    }
+    else if(it->item->left != NULL || it->item->right != NULL)
+    {
+        //
+    }
+    else
+    {
+    }
 }
