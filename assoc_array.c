@@ -109,16 +109,11 @@ void checkParentAndReplaceChild(TreeIteratorPointerT it, TreeNodePointerT newChi
 {
     if(it->container->root == it->item)
         it->container->root = newChild;
+    else if(it->item->parent->left == it->item)
+        it->item->parent->left = newChild;
     else
-    {
-        if(it->item->parent->left == it->item)
-            it->item->parent->left = newChild;
-        else
-            it->item->parent->right = newChild;
-    }
+        it->item->parent->right = newChild;
 }
-
-
 
 void rotateTreeNodeLeft(TreeNodePointerT oldRoot, TreeNodePointerT newRoot)
 {
@@ -126,8 +121,7 @@ void rotateTreeNodeLeft(TreeNodePointerT oldRoot, TreeNodePointerT newRoot)
     if(oldRoot->right != NULL)
         oldRoot->right->parent = oldRoot;
     newRoot->left = oldRoot;
-    newRoot->parent = oldRoot->parent;
-    oldRoot->parent = newRoot;
+    newRoot->parent = oldRoot->parent;    
 }
 
 void rotateTreeNodeRight(TreeNodePointerT oldRoot, TreeNodePointerT newRoot)
@@ -137,7 +131,6 @@ void rotateTreeNodeRight(TreeNodePointerT oldRoot, TreeNodePointerT newRoot)
         oldRoot->left->parent = oldRoot;
     newRoot->right = oldRoot;
     newRoot->parent = oldRoot->parent;
-    oldRoot->parent = newRoot;
 }
 
 void rotateTreeNode(LSQ_IteratorT iterator, RotateModeT mode)
@@ -157,6 +150,7 @@ void rotateTreeNode(LSQ_IteratorT iterator, RotateModeT mode)
     checkParentAndReplaceChild(it, newRoot);
     
     mode == RM_LEFT ? rotateTreeNodeLeft(oldRoot, newRoot) : rotateTreeNodeRight(oldRoot, newRoot);
+    oldRoot->parent = newRoot;
 
     updateTreeNodeHeight(oldRoot);
     updateTreeNodeHeight(newRoot);
@@ -185,6 +179,7 @@ int getTreeNodeBalanceParameter(TreeNodePointerT node)
 
 void fixTreeNodeBalance(TreeIteratorPointerT it, int stopCriterion)
 {
+    assert(LSQ_IsIteratorDereferencable(it));
     do
     {
         updateTreeNodeHeight(it->item);
@@ -210,7 +205,8 @@ LSQ_HandleT LSQ_CreateSequence(void)
     TreePointerT h = NULL;	
 
     h = (TreePointerT)malloc(sizeof(TreeT));
-    if(h == NULL) return LSQ_HandleInvalid;	
+    if(h == NULL)
+        return LSQ_HandleInvalid;	
 
     h->root = NULL;
     h->count = 0;	
@@ -269,20 +265,17 @@ LSQ_IteratorT LSQ_GetElementByIndex(LSQ_HandleT handle, LSQ_IntegerIndexT index)
     it = createIterator(handle, IT_DEREFERENCABLE, ((TreePointerT)handle)->root);
     if(it == NULL)
         return LSQ_HandleInvalid;
-    while(it->item != NULL && it->item->key != index)
+    while(
+        it->item != NULL && (
+            (it->item->key > index && it->item->left != NULL) ||
+            (it->item->key < index && it->item->right != NULL)
+        )
+    )
     {
         if(it->item->key > index)
-        {
-            if(it->item->left == NULL)
-                break;
             it->item = it->item->left;
-        }
         else if(it->item->key < index)
-        {
-            if(it->item->right == NULL)
-                break;            
             it->item = it->item->right;
-        }        
     }
     if(it->item == NULL || it->item->key != index)
         it->type = IT_PASTREAR;
@@ -391,16 +384,10 @@ void LSQ_ShiftPosition(LSQ_IteratorT iterator, LSQ_IntegerIndexT shift)
     TreeIteratorPointerT it = (TreeIteratorPointerT)iterator;
     if(it == NULL)
         return;
-    while(shift > 0)
-    {
+    while(shift-- > 0)
         LSQ_AdvanceOneElement(it);
-        shift--;
-    }
-    while(shift < 0)
-    {
+    while(shift++ < 0)
         LSQ_RewindOneElement(it);
-        shift++;
-    }
 }
 
 void LSQ_SetPosition(LSQ_IteratorT iterator, LSQ_IntegerIndexT pos)
@@ -471,9 +458,11 @@ void LSQ_DeleteElement(LSQ_HandleT handle, LSQ_IntegerIndexT key)
     TreeNodePointerT node = NULL;
     TreeIteratorPointerT parent = NULL;
     TreeIteratorPointerT it = (TreeIteratorPointerT)LSQ_GetElementByIndex(handle, key);
+
     if(it == NULL || !LSQ_IsIteratorDereferencable(it))
         return;
     assert(it->item != NULL);
+
     parent = createIterator(handle, IT_DEREFERENCABLE, it->item->parent);
     if(it->item->left == NULL && it->item->right == NULL)
     {   
