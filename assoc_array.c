@@ -48,19 +48,23 @@ typedef
     }
         TreeIteratorT, * TreeIteratorPointerT;
 
+
+static TreeNodePointerT createTreeNode(LSQ_IntegerIndexT key, LSQ_BaseTypeT value, TreeNodePointerT parent);
 static LSQ_IteratorT createIterator(LSQ_HandleT handle, IteratorTypeT type, TreeNodePointerT item);
-static void freeTreeNode(TreeNodePointerT bode);
-static void checkParentAndReplaceChild(
-    TreeIteratorPointerT it, TreeNodePointerT newChild);
+static void freeTreeNode(TreeNodePointerT node);
+
+static void checkParentAndReplaceChild(TreeIteratorPointerT it, TreeNodePointerT newChild);
+
 static void rotateTreeNodeLeft(TreeNodePointerT oldRoot, TreeNodePointerT newRoot);
 static void rotateTreeNodeRight(TreeNodePointerT oldRoot, TreeNodePointerT newRoot);
 static void rotateTreeNode(LSQ_IteratorT iterator, RotateModeT mode);
+
 static void updateTreeNodeHeight(TreeNodePointerT node);
 static int getTreeNodeHeight(TreeNodePointerT node);
-static TreeNodePointerT createTreeNode(LSQ_IntegerIndexT key, LSQ_BaseTypeT value, TreeNodePointerT parent);
 static int getTreeNodeBalanceParameter(TreeNodePointerT node);
+static void fixTreeNodeBalance(TreeIteratorPointerT it, int stopCriterion);
 
-static TreeNodePointerT createTreeNode(LSQ_IntegerIndexT key, LSQ_BaseTypeT value, TreeNodePointerT parent)
+TreeNodePointerT createTreeNode(LSQ_IntegerIndexT key, LSQ_BaseTypeT value, TreeNodePointerT parent)
 {
     TreeNodePointerT node = (TreeNodePointerT)malloc(sizeof(TreeNodeT));
     if(node == NULL)
@@ -72,16 +76,6 @@ static TreeNodePointerT createTreeNode(LSQ_IntegerIndexT key, LSQ_BaseTypeT valu
     node->left = NULL;
     node->right = NULL;
     return node;
-}
-
-static int getTreeNodeHeight(TreeNodePointerT node)
-{
-    return node == NULL ? 0 : node->height;
-}
-
-static int getTreeNodeBalanceParameter(TreeNodePointerT node)
-{
-    return getTreeNodeHeight(node->left) - getTreeNodeHeight(node->right);
 }
 
 LSQ_IteratorT createIterator(LSQ_HandleT handle, IteratorTypeT type, TreeNodePointerT item)
@@ -111,8 +105,7 @@ void freeTreeNode(TreeNodePointerT node)
     free(node);
 }
 
-void checkParentAndReplaceChild(
-    TreeIteratorPointerT it, TreeNodePointerT newChild)
+void checkParentAndReplaceChild(TreeIteratorPointerT it, TreeNodePointerT newChild)
 {
     if(it->container->root == it->item)
         it->container->root = newChild;
@@ -125,12 +118,7 @@ void checkParentAndReplaceChild(
     }
 }
 
-void updateTreeNodeHeight(TreeNodePointerT node)
-{
-    int left = getTreeNodeHeight(node->left);
-    int right = getTreeNodeHeight(node->right);
-    node->height = 1 + (left > right ? left : right);
-}
+
 
 void rotateTreeNodeLeft(TreeNodePointerT oldRoot, TreeNodePointerT newRoot)
 {
@@ -172,6 +160,49 @@ void rotateTreeNode(LSQ_IteratorT iterator, RotateModeT mode)
 
     updateTreeNodeHeight(oldRoot);
     updateTreeNodeHeight(newRoot);
+}
+
+void updateTreeNodeHeight(TreeNodePointerT node)
+{
+    int left;
+    int right;
+    if(node == NULL)
+        return;
+    left = getTreeNodeHeight(node->left);
+    right = getTreeNodeHeight(node->right);
+    node->height = 1 + (left > right ? left : right);
+}
+
+int getTreeNodeHeight(TreeNodePointerT node)
+{
+    return node == NULL ? 0 : node->height;
+}
+
+int getTreeNodeBalanceParameter(TreeNodePointerT node)
+{
+    return getTreeNodeHeight(node->left) - getTreeNodeHeight(node->right);
+}
+
+void fixTreeNodeBalance(TreeIteratorPointerT it, int stopCriterion)
+{
+    do
+    {
+        updateTreeNodeHeight(it->item);
+        if(getTreeNodeBalanceParameter(it->item) == 2)
+        {
+            if(getTreeNodeBalanceParameter(it->item->left) < 0)
+                rotateTreeNode(it->item->left, RM_LEFT);
+            rotateTreeNode(it, RM_RIGHT);
+        }
+        else if(getTreeNodeBalanceParameter(it->item) == -2)
+        {
+            if(getTreeNodeBalanceParameter(it->item->right) > 0)
+                rotateTreeNode(it->item->right, RM_RIGHT);
+            rotateTreeNode(it, RM_LEFT);
+        }
+        it->item = it->item->parent;
+    }
+    while(it->item->parent != NULL && abs(getTreeNodeBalanceParameter(it->item)) != stopCriterion);
 }
 
 LSQ_HandleT LSQ_CreateSequence(void)
@@ -409,24 +440,8 @@ void LSQ_InsertElement(LSQ_HandleT handle, LSQ_IntegerIndexT key, LSQ_BaseTypeT 
     else
         it->item->right = node;
     h->count++;
-    do 
-    {
-        updateTreeNodeHeight(it->item);
-        if(getTreeNodeBalanceParameter(it->item) > 1)
-        {
-            if(getTreeNodeBalanceParameter(it->item->left) < 0)
-                rotateTreeNode(it->item->left, RM_LEFT);
-            rotateTreeNode(it, RM_RIGHT);
-        }
-        else if(getTreeNodeBalanceParameter(it->item) < -1)
-        {
-            if(getTreeNodeBalanceParameter(it->item->right) > 0)
-                rotateTreeNode(it->item->right, RM_RIGHT);
-            rotateTreeNode(it, RM_LEFT);
-        }
-        it->item = it->item->parent;
-    }
-    while(it->item->parent != NULL || getTreeNodeHeight(it->item));
+    
+    fixTreeNodeBalance(it, 0);
     
     LSQ_DestroyIterator(it);
 }
@@ -452,19 +467,43 @@ void LSQ_DeleteRearElement(LSQ_HandleT handle)
 
 void LSQ_DeleteElement(LSQ_HandleT handle, LSQ_IntegerIndexT key)
 {
+    int tmp = 0;
+    TreeNodePointerT node = NULL;
+    TreeIteratorPointerT parent = NULL;
     TreeIteratorPointerT it = (TreeIteratorPointerT)LSQ_GetElementByIndex(handle, key);
-    if(it == NULL)
+    if(it == NULL || !LSQ_IsIteratorDereferencable(it))
         return;
     assert(it->item != NULL);
+    parent = createIterator(handle, IT_DEREFERENCABLE, it->item->parent);
     if(it->item->left == NULL && it->item->right == NULL)
-    {
+    {   
         checkParentAndReplaceChild(it, NULL);
+        freeTreeNode(it->item);        
     }
     else if(it->item->left != NULL || it->item->right != NULL)
-    {
-        //
+    {   
+        node = it->item->left == NULL ? it->item->right : it->item->left;
+        checkParentAndReplaceChild(it, node);
+        node->parent = it->item->parent;
+        it->item->left = NULL;
+        it->item->right = NULL;
+        freeTreeNode(it->item);
     }
     else
     {
+        node = it->item->left;
+        while(node->right != NULL)
+            node = node->right;
+        it->item->value = node->value;
+        tmp = it->item->key;
+        it->item->key = node->key;
+        node->key = tmp;        
+        LSQ_DeleteElement(handle, node->key);
     }
+    it->container->count--;
+
+    fixTreeNodeBalance(parent, 1);        
+    
+    LSQ_DestroyIterator(it);
+    LSQ_DestroyIterator(parent);
 }
