@@ -1,6 +1,7 @@
 //#define NDEBUG
 #include <assert.h>
 #include "linear_sequence_assoc.h"
+//#include <stdio.h>
 
 typedef
 	enum
@@ -177,27 +178,45 @@ int getTreeNodeBalanceParameter(TreeNodePointerT node)
     return getTreeNodeHeight(node->left) - getTreeNodeHeight(node->right);
 }
 
+/*static void OUT(TreeNodePointerT n)
+{
+    if(n == NULL) return;
+    printf("%d ", n->key);
+    if(n->left != NULL) printf("%d ", n->left->key);
+    if(n->right != NULL) printf("%d ", n->right->key);
+    printf("\n");
+    OUT(n->left);
+    OUT(n->right);
+    return;
+}*/
+
 void fixTreeNodeBalance(TreeIteratorPointerT it, int stopCriterion)
 {
+    TreeIteratorPointerT tmp = (TreeIteratorPointerT)createIterator(it->container, IT_DEREFERENCABLE, it->item);
     assert(LSQ_IsIteratorDereferencable(it));
     do
     {
         updateTreeNodeHeight(it->item);
         if(getTreeNodeBalanceParameter(it->item) == 2)
         {
+            tmp->item = it->item->left;
             if(getTreeNodeBalanceParameter(it->item->left) < 0)
-                rotateTreeNode(it->item->left, RM_LEFT);
+                rotateTreeNode(tmp, RM_LEFT);
             rotateTreeNode(it, RM_RIGHT);
         }
         else if(getTreeNodeBalanceParameter(it->item) == -2)
         {
+            tmp->item = it->item->right;
             if(getTreeNodeBalanceParameter(it->item->right) > 0)
-                rotateTreeNode(it->item->right, RM_RIGHT);
+                rotateTreeNode(tmp, RM_RIGHT);
             rotateTreeNode(it, RM_LEFT);
         }
         it->item = it->item->parent;
-    }
+        //printf("\n");
+        //OUT(it->container->root);
+    }    
     while(it->item != NULL && abs(getTreeNodeBalanceParameter(it->item)) != stopCriterion);
+    LSQ_DestroyIterator(tmp);
 }
 
 LSQ_HandleT LSQ_CreateSequence(void)
