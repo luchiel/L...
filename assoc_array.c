@@ -279,7 +279,7 @@ LSQ_IntegerIndexT LSQ_GetIteratorKey(LSQ_IteratorT iterator)
 LSQ_IteratorT LSQ_GetElementByIndex(LSQ_HandleT handle, LSQ_IntegerIndexT index)
 {
     TreeIteratorPointerT it = NULL;    
-    if(handle == NULL)
+    if(handle == NULL || ((TreePointerT)handle)->root == NULL)
         return LSQ_HandleInvalid;
     it = (TreeIteratorPointerT)createIterator(handle, IT_DEREFERENCABLE, ((TreePointerT)handle)->root);
     if(it == NULL)
@@ -518,6 +518,7 @@ void LSQ_DeleteElement(LSQ_HandleT handle, LSQ_IntegerIndexT key)
         node->parent = it->item->parent;
         it->item->left = NULL;
         it->item->right = NULL;
+        parent = (TreeIteratorPointerT)createIterator(handle, IT_DEREFERENCABLE, node->parent);
         freeTreeNode(it->item);
     }
     it->container->count--;
