@@ -491,25 +491,31 @@ void LSQ_DeleteElement(LSQ_HandleT handle, LSQ_IntegerIndexT key)
     assert(it->item != NULL);
 
     if(it->item->parent != NULL)
+    {
         parent = (TreeIteratorPointerT)createIterator(handle, IT_DEREFERENCABLE, it->item->parent);
+        if(parent == NULL)
+            return;
+    }
+
     if(it->item->left == NULL && it->item->right == NULL)
     {   
         checkParentAndReplaceChild(it, NULL);
-        freeTreeNode(it->item);        
+        freeTreeNode(it->item);
     }
     else if(it->item->left != NULL && it->item->right != NULL)
-    {   
+    {
         node = it->item->left;
         while(node->right != NULL)
             node = node->right;
-        it->item->value = node->value;        
+        tmp = it->item->key;
         it->item->key = node->key;
-        if(node->parent->left == node)
-            node->parent->left = NULL;
-        else
-            node->parent->right = NULL;
-        parent = (TreeIteratorPointerT)createIterator(handle, IT_DEREFERENCABLE, node->parent);
-        freeTreeNode(node);
+        it->item->value = node->value;
+        node->key = tmp;
+
+        LSQ_DeleteElement(handle, node->key);
+        LSQ_DestroyIterator(it);
+        LSQ_DestroyIterator(parent);
+        return;
     }
     else
     {
@@ -518,7 +524,6 @@ void LSQ_DeleteElement(LSQ_HandleT handle, LSQ_IntegerIndexT key)
         node->parent = it->item->parent;
         it->item->left = NULL;
         it->item->right = NULL;
-        parent = (TreeIteratorPointerT)createIterator(handle, IT_DEREFERENCABLE, node->parent);
         freeTreeNode(it->item);
     }
     it->container->count--;
