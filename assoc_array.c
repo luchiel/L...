@@ -2,6 +2,7 @@
 #include <assert.h>
 #include "linear_sequence_assoc.h"
 //#include <stdio.h>
+#include <stdlib.h>
 
 typedef
 	enum
@@ -481,7 +482,6 @@ void LSQ_DeleteRearElement(LSQ_HandleT handle)
 
 void LSQ_DeleteElement(LSQ_HandleT handle, LSQ_IntegerIndexT key)
 {
-    int tmp = 0;
     TreeNodePointerT node = NULL;
     TreeIteratorPointerT parent = NULL;
     TreeIteratorPointerT it = (TreeIteratorPointerT)LSQ_GetElementByIndex(handle, key);
@@ -507,10 +507,7 @@ void LSQ_DeleteElement(LSQ_HandleT handle, LSQ_IntegerIndexT key)
         node = it->item->left;
         while(node->right != NULL)
             node = node->right;
-        tmp = it->item->key;
-        it->item->key = node->key;
         it->item->value = node->value;
-        node->key = tmp;
 
         LSQ_DeleteElement(handle, node->key);
         LSQ_DestroyIterator(it);
