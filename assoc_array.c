@@ -482,6 +482,7 @@ void LSQ_DeleteRearElement(LSQ_HandleT handle)
 
 void LSQ_DeleteElement(LSQ_HandleT handle, LSQ_IntegerIndexT key)
 {
+    int tmp = 0;
     TreeNodePointerT node = NULL;
     TreeIteratorPointerT parent = NULL;
     TreeIteratorPointerT it = (TreeIteratorPointerT)LSQ_GetElementByIndex(handle, key);
@@ -508,8 +509,10 @@ void LSQ_DeleteElement(LSQ_HandleT handle, LSQ_IntegerIndexT key)
         while(node->right != NULL)
             node = node->right;
         it->item->value = node->value;
+        tmp = node->key;
 
         LSQ_DeleteElement(handle, node->key);
+        it->item->key = tmp;
         LSQ_DestroyIterator(it);
         LSQ_DestroyIterator(parent);
         return;
