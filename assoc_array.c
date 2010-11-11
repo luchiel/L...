@@ -1,17 +1,16 @@
 //#define NDEBUG
 #include <assert.h>
 #include "linear_sequence_assoc.h"
-//#include <stdio.h>
 #include <stdlib.h>
 
 typedef
-	enum
+    enum
     {
-		IT_DEREFERENCABLE,
-		IT_BEFOREFIRST,
-		IT_PASTREAR
-	}
-        IteratorTypeT;
+        IT_DEREFERENCABLE,
+        IT_BEFOREFIRST,
+        IT_PASTREAR
+    }
+    IteratorTypeT;
 
 typedef
     enum
@@ -179,18 +178,6 @@ int getTreeNodeBalanceParameter(TreeNodePointerT node)
     return getTreeNodeHeight(node->left) - getTreeNodeHeight(node->right);
 }
 
-/*static void OUT(TreeNodePointerT n)
-{
-    if(n == NULL) return;
-    printf("%d ", n->key);
-    if(n->left != NULL) printf("%d ", n->left->key);
-    if(n->right != NULL) printf("%d ", n->right->key);
-    printf("\n");
-    OUT(n->left);
-    OUT(n->right);
-    return;
-}*/
-
 void fixTreeNodeBalance(TreeIteratorPointerT it, int stopCriterion)
 {
     TreeIteratorPointerT tmp = (TreeIteratorPointerT)createIterator(it->container, IT_DEREFERENCABLE, it->item);
@@ -213,8 +200,6 @@ void fixTreeNodeBalance(TreeIteratorPointerT it, int stopCriterion)
             rotateTreeNode(it, RM_LEFT);
         }
         it->item = it->item->parent;
-        //printf("\n");
-        //OUT(it->container->root);
     }    
     while(it->item != NULL && abs(getTreeNodeBalanceParameter(it->item)) != stopCriterion);
     LSQ_DestroyIterator(tmp);
@@ -488,14 +473,20 @@ void LSQ_DeleteElement(LSQ_HandleT handle, LSQ_IntegerIndexT key)
     TreeIteratorPointerT it = (TreeIteratorPointerT)LSQ_GetElementByIndex(handle, key);
 
     if(it == NULL || !LSQ_IsIteratorDereferencable(it))
+    {
+        LSQ_DestroyIterator(it);
         return;
+    }
     assert(it->item != NULL);
 
     if(it->item->parent != NULL)
     {
         parent = (TreeIteratorPointerT)createIterator(handle, IT_DEREFERENCABLE, it->item->parent);
         if(parent == NULL)
+        {
+            LSQ_DestroyIterator(it);
             return;
+        }
     }
 
     if(it->item->left == NULL && it->item->right == NULL)
