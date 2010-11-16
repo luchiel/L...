@@ -424,7 +424,8 @@ void LSQ_InsertElement(LSQ_HandleT handle, LSQ_IntegerIndexT key, LSQ_BaseTypeT 
     if(h->root == NULL)
     {
         h->root = createTreeNode(key, value, NULL);
-        h->count++;
+        if(h->root != NULL)
+            h->count++;
         return;
     }
     it = (TreeIteratorPointerT)LSQ_GetElementByIndex(handle, key);
@@ -437,6 +438,8 @@ void LSQ_InsertElement(LSQ_HandleT handle, LSQ_IntegerIndexT key, LSQ_BaseTypeT 
         return;
     }
     node = createTreeNode(key, value, it->item);
+    if(node == NULL)
+        return;
     if(it->item->key > key)
         it->item->left = node;
     else
