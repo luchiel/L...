@@ -527,8 +527,8 @@ void LSQ_DeleteElement(LSQ_HandleT handle, LSQ_IntegerIndexT key)
     }
     it->container->count--;
 
-    //if(parent != NULL)        
-    fixTreeNodeBalance(parent, 1);        
+    if(parent != NULL)        
+        fixTreeNodeBalance(parent, 1);        
     
     LSQ_DestroyIterator(it);
     LSQ_DestroyIterator(parent);
